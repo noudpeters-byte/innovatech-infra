@@ -69,7 +69,7 @@ resource "aws_launch_template" "web_lt" {
     INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
     AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
-    echo "<h1>Innovatech Ticketing</h1><p>Served by $INSTANCE_ID in $AZ</p>" > /usr/share/nginx/html/index.html
+    echo "<h1>Innovatech Ticketing</h1><p>Served by Noud Peters: $INSTANCE_ID in $AZ</p>" > /usr/share/nginx/html/index.html
     systemctl enable --now nginx
 
     cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'CWCONFIG'
