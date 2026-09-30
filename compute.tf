@@ -157,7 +157,7 @@ resource "aws_autoscaling_group" "web_asg" {
   }
 }
 
-# ---------- Scaling policy: CPU metric -> automatic scaling ----------
+# ---------- Scaling policy ----------
 resource "aws_autoscaling_policy" "cpu_target_tracking" {
   name                   = "nca-cpu-target-tracking"
   autoscaling_group_name = aws_autoscaling_group.web_asg.name
