@@ -1,0 +1,19 @@
+name: Test Runner
+on:
+  workflow_dispatch: # This allows you to manually trigger it from the Actions tab
+
+jobs:
+  check-env:
+    runs-on: self-hosted # This forces it to use your EC2 instance
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Environment
+        run: |
+          echo "Running on: $(hostname)"
+          terraform --version
+          aws --version
+          
+      - name: Terraform Init
+        run: terraform init
