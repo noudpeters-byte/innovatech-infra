@@ -71,4 +71,13 @@ resource "aws_instance" "runner" {
   EOF
 
   tags = { Name = "GitHub-Runner" }
+
+   lifecycle {
+    ignore_changes = [
+      ami,
+      instance_type,
+      user_data,
+      # Add any other fields that Terraform keeps trying to change
+    ]
+  }
 }
