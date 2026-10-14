@@ -69,12 +69,14 @@ resource "aws_launch_template" "web_lt" {
     INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
     AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
-    echo "<h1>Innovatech Ticketing</h1><p>Served by Noud Peters: $INSTANCE_ID in $AZ</p>" > /usr/share/nginx/html/index.html
+    echo "<h1>Innovatech Ticketing</h1><p>Served by $INSTANCE_ID in $AZ</p>" > /usr/share/nginx/html/index.html
     systemctl enable --now nginx
 
     cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'CWCONFIG'
     {
       "metrics": {
+        "append_dimensions": { "AutoScalingGroupName": "$${aws:AutoScalingGroupName}" },
+        "aggregation_dimensions": [["AutoScalingGroupName"]],
         "metrics_collected": {
           "mem":  { "measurement": ["mem_used_percent"] },
           "disk": { "measurement": ["used_percent"], "resources": ["/"] }
@@ -121,11 +123,13 @@ resource "aws_autoscaling_group" "web_asg" {
 
   # Needed for the "instances in service" widget on the dashboard
   metrics_granularity = "1Minute"
-  enabled_metrics     = ["GroupDesiredCapacity", "GroupInServiceInstances"]
+  enabled_metrics     = ["GroupDesiredCapacity", "GroupInServiceInstances", "GroupPendingInstances"]
 
+  # Use the numeric latest_version (not the string "$Latest"): when the launch
+  # template changes, this value changes too, which is what triggers instance_refresh.
   launch_template {
     id      = aws_launch_template.web_lt.id
-    version = "$Latest"
+    version = aws_launch_template.web_lt.latest_version
   }
 
   # ROLLING UPDATE deployment strategy: when the launch template changes,
@@ -157,7 +161,7 @@ resource "aws_autoscaling_group" "web_asg" {
   }
 }
 
-# ---------- Scaling policy ----------
+# ---------- Scaling policy: CPU metric -> automatic scaling ----------
 resource "aws_autoscaling_policy" "cpu_target_tracking" {
   name                   = "nca-cpu-target-tracking"
   autoscaling_group_name = aws_autoscaling_group.web_asg.name

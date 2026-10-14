@@ -63,18 +63,3 @@ resource "aws_security_group" "db_sg" {
   tags = { Name = "db-sg" }
 }
 
-# ---------- CI/CD runner: no inbound at all (managed via SSM) ----------
-resource "aws_security_group" "runner_sg" {
-  name        = "runner-sg"
-  description = "GitHub Actions runner, outbound only"
-  vpc_id      = aws_vpc.nca_vpc.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = { Name = "runner-sg" }
-}
