@@ -1,19 +1,21 @@
-name: Test Runner
+name: Terraform Deploy
 on:
-  workflow_dispatch: # This allows you to manually trigger it from the Actions tab
+  push:
+    branches:
+      - main
 
 jobs:
-  check-env:
-    runs-on: self-hosted # This forces it to use your EC2 instance
+  terraform:
+    runs-on: self-hosted
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Verify Environment
-        run: |
-          echo "Running on: $(hostname)"
-          terraform --version
-          aws --version
-          
       - name: Terraform Init
         run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      # Only apply on manual approval or if you are sure
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
