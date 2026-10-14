@@ -31,8 +31,8 @@ resource "aws_iam_instance_profile" "runner_profile" {
 
 # ---------- Runner Security Group ----------
 resource "aws_security_group" "runner_sg" {
-  name        = "github-runner-sg"
-  vpc_id      = aws_vpc.nca_vpc.id
+  name   = "github-runner-sg"
+  vpc_id = aws_vpc.nca_vpc.id
 
   egress {
     from_port   = 0
@@ -46,10 +46,10 @@ resource "aws_security_group" "runner_sg" {
 
 # ---------- EC2 Runner Instance ----------
 resource "aws_instance" "runner" {
-  ami                  = data.aws_ami.amazon_linux.id
-  instance_type        = "t3.small"
-  subnet_id            = aws_subnet.public_a.id # Public subnet allows outbound internet via IGW
-  iam_instance_profile = aws_iam_instance_profile.runner_profile.name
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.small"
+  subnet_id              = aws_subnet.public_a.id # Public subnet allows outbound internet via IGW
+  iam_instance_profile   = aws_iam_instance_profile.runner_profile.name
   vpc_security_group_ids = [aws_security_group.runner_sg.id]
 
   user_data = <<-EOF
@@ -72,7 +72,7 @@ resource "aws_instance" "runner" {
 
   tags = { Name = "GitHub-Runner" }
 
-   lifecycle {
+  lifecycle {
     ignore_changes = [
       ami,
       instance_type,
