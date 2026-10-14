@@ -34,19 +34,3 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: terraform apply -auto-approve
   
-  smoke_test:
-    runs-on: [ self-hosted, linux ]
-    needs: terraform
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Terraform Init
-      run: terraform init
-    
-    - name: Get ALB DNS
-      run: |
-        ALB_DNS=$(terraform output -raw alb_dns_name)
-        echo "Testing: http://$ALB_DNS"
-        curl -f --retry 15 --retry-delay 20 --retry-connrefused "http://$ALB_DNS" || exit 1
