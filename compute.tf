@@ -162,6 +162,8 @@ resource "aws_autoscaling_group" "web_asg" {
   target_group_arns         = [aws_lb_target_group.web_tg.arn]
   health_check_type         = "ELB"
   health_check_grace_period = 180
+  
+#tescomment
 
   # Needed for the "instances in service" widget on the dashboard
   metrics_granularity = "1Minute"
