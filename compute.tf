@@ -60,17 +60,65 @@ resource "aws_launch_template" "web_lt" {
     http_tokens = "required"
   }
 
-  # Installs Nginx + CloudWatch agent and shows which instance served the page
   user_data = base64encode(<<-EOF
     #!/bin/bash
-    dnf install -y nginx amazon-cloudwatch-agent
+    dnf install -y nginx php php-fpm php-mysqlnd amazon-cloudwatch-agent
 
     TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
     INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
     AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
-    echo "<h1>Innovatech Ticketing</h1><p>Served by $INSTANCE_ID in $AZ</p>" > /usr/share/nginx/html/index.html
-    systemctl enable --now nginx
+    # Database settings, filled in by Terraform at apply time
+    cat > /usr/share/nginx/html/db.inc.php <<'PHP'
+    <?php
+    define('DB_HOST', '${aws_db_instance.mysql_db.address}');
+    define('DB_USER', 'admin');
+    define('DB_PASS', '${var.db_password}');
+    define('DB_NAME', 'ticketsdb');
+    PHP
+
+    cat > /usr/share/nginx/html/index.php <<'PHP'
+    <?php
+    require 'db.inc.php';
+    echo "<h1>Innovatech Ticketing</h1>";
+    echo "<p>Served by " . htmlspecialchars(trim(file_get_contents('/var/lib/instance-id'))) . "</p>";
+    $db = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    if ($db->connect_errno) {
+        echo "<p>Database error: " . htmlspecialchars($db->connect_error) . "</p>";
+    } else {
+        $db->query("CREATE TABLE IF NOT EXISTS tickets (id INT AUTO_INCREMENT PRIMARY KEY, event VARCHAR(100))");
+        $count = $db->query("SELECT COUNT(*) FROM tickets")->fetch_row()[0];
+        if ($count == 0) { $db->query("INSERT INTO tickets (event) VALUES ('Welcome concert')"); }
+        echo "<p>Database: connected</p><ul>";
+        foreach ($db->query("SELECT id, event FROM tickets") as $row) {
+            echo "<li>#" . $row['id'] . " " . htmlspecialchars($row['event']) . "</li>";
+        }
+        echo "</ul>";
+    }
+    PHP
+
+    echo "$INSTANCE_ID in $AZ" > /var/lib/instance-id
+
+    # PHP-FPM runs as nginx so it can read the files
+    sed -i 's/^user = .*/user = nginx/; s/^group = .*/group = nginx/' /etc/php-fpm.d/www.conf
+
+    # Nginx: serve the page and send .php files to PHP-FPM
+    rm -f /etc/nginx/conf.d/default.conf
+    cat > /etc/nginx/conf.d/app.conf <<'NGINX'
+    server {
+        listen 80 default_server;
+        root /usr/share/nginx/html;
+        index index.php;
+        location / { try_files $uri $uri/ /index.php?$args; }
+        location ~ \.php$ {
+            fastcgi_pass unix:/run/php-fpm/www.sock;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            include fastcgi_params;
+        }
+    }
+    NGINX
+
+    systemctl enable --now php-fpm nginx
 
     cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'CWCONFIG'
     {
@@ -101,12 +149,6 @@ resource "aws_launch_template" "web_lt" {
     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json -s
   EOF
   )
-
-  tag_specifications {
-    resource_type = "instance"
-    tags          = { Name = "NCA-Web-Server" }
-  }
-}
 
 # ---------- Auto Scaling Group ----------
 resource "aws_autoscaling_group" "web_asg" {
