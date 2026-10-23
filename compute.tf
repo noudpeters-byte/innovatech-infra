@@ -149,7 +149,7 @@ resource "aws_launch_template" "web_lt" {
     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json -s
   EOF
   )
-
+}
 # ---------- Auto Scaling Group ----------
 resource "aws_autoscaling_group" "web_asg" {
   name                = "nca-web-asg"
