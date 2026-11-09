@@ -1,4 +1,4 @@
-# ---------- AMI ----------
+# ---------- AMI THIS IS A TEST----------
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -82,7 +82,7 @@ resource "aws_launch_template" "web_lt" {
     require 'db.inc.php';
     echo "<h1>Innovatech Ticketing</h1>";
     echo "<p>Served by " . htmlspecialchars(trim(file_get_contents('/var/lib/instance-id'))) . "</p>";
-    $db = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    $db = @new mysqli("p:" . DB_HOST, DB_USER, DB_PASS, DB_NAME);
     if ($db->connect_errno) {
         echo "<p>Database error: " . htmlspecialchars($db->connect_error) . "</p>";
     } else {
