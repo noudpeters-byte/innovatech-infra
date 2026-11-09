@@ -1,0 +1,31 @@
+name: CS1 Infra Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    runs-on: [self-hosted, windows, cs1]
+    env:
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Format check
+        run: terraform fmt -check
+
+      - name: Init and validate
+        run: |
+          terraform init
+          terraform validate
+
+      - name: Plan
+        run: terraform plan -no-color -input=false -out=tfplan
+
+      - name: Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve -input=false tfplan
